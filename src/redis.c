@@ -1718,11 +1718,11 @@ void initServerConfig() {
 
     // 服务器状态
 
-    // 设置服务器的运行 ID
+    // 设置服务器的运行 ID，长度40字节/字符
     getRandomHexChars(server.runid,REDIS_RUN_ID_SIZE);
     // 设置默认配置文件路径
     server.configfile = NULL;
-    // 设置默认服务器频率
+    // 设置默认服务器频率, 10Hz,表示每100ms运行一次
     server.hz = REDIS_DEFAULT_HZ;
     // 为运行 ID 加上结尾字符
     server.runid[REDIS_RUN_ID_SIZE] = '\0';
@@ -1788,7 +1788,9 @@ void initServerConfig() {
     server.zset_max_ziplist_value = REDIS_ZSET_MAX_ZIPLIST_VALUE;
     server.hll_sparse_max_bytes = REDIS_DEFAULT_HLL_SPARSE_MAX_BYTES;
     server.shutdown_asap = 0;
+	//主从之间ping的默认时间间隔：10s，
     server.repl_ping_slave_period = REDIS_REPL_PING_SLAVE_PERIOD;
+	//#同步超时时间：60s
     server.repl_timeout = REDIS_REPL_TIMEOUT;
     server.repl_min_slaves_to_write = REDIS_DEFAULT_MIN_SLAVES_TO_WRITE;
     server.repl_min_slaves_max_lag = REDIS_DEFAULT_MIN_SLAVES_MAX_LAG;
@@ -1809,6 +1811,8 @@ void initServerConfig() {
     // 初始化并设置保存条件
     resetServerSaveParams();
 
+
+	//BGSAGE自动执行的参数设置
     appendServerSaveParams(60*60,1);  /* save after 1 hour and 1 change */
     appendServerSaveParams(300,100);  /* save after 5 minutes and 100 changes */
     appendServerSaveParams(60,10000); /* save after 1 minute and 10000 changes */
@@ -1833,6 +1837,7 @@ void initServerConfig() {
     /* Replication partial resync backlog */
     // 初始化 PSYNC 命令所使用的 backlog
     server.repl_backlog = NULL;
+	//PSYNC的默认backlog size 为1MB
     server.repl_backlog_size = REDIS_DEFAULT_REPL_BACKLOG_SIZE;
     server.repl_backlog_histlen = 0;
     server.repl_backlog_idx = 0;
@@ -2218,6 +2223,7 @@ void populateCommandTable(void) {
     int j;
 
     // 命令的数量
+    //redisCommand结构体的长度是固定的
     int numcommands = sizeof(redisCommandTable)/sizeof(struct redisCommand);
 
     for (j = 0; j < numcommands; j++) {
@@ -2261,6 +2267,8 @@ void populateCommandTable(void) {
          * 原始命令表不会受 redis.conf 中命令改名的影响
          */
         retval2 = dictAdd(server.orig_commands, sdsnew(c->name), c);
+
+		//Ques：通过redis.conf rename 的命令是如何生效的？
 
         redisAssert(retval1 == DICT_OK && retval2 == DICT_OK);
     }
@@ -3950,6 +3958,9 @@ int main(int argc, char **argv) {
     server.sentinel_mode = checkForSentinelMode(argc,argv);
 
     // 初始化服务器
+    /*
+     * 包括:一些基本配置信息的初始化, 读取配置文件中的配置,初始化commandTable等;
+     */
     initServerConfig();
 
     /* We need to init sentinel right now as parsing the configuration file

@@ -1359,6 +1359,7 @@ struct redisCommand {
     /* Use a function to determine keys arguments in a command line.
      * Used for Redis Cluster redirect. */
     // 从命令中判断命令的键参数。在 Redis 集群转向时使用。
+    // 什么是“集群转向”？
     redisGetKeysProc *getkeys_proc;
 
     /* What keys should be loaded in background when calling this command? */
