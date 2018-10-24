@@ -279,6 +279,8 @@ static void aeAddMillisecondsToNow(long long milliseconds, long *sec, long *ms) 
 
 /*
  * 创建时间事件
+ * 时间事件:Redis服务器中的一些操作(比如说 serverCron函数)需要在给定的时间点执行,
+ * 时间事件就是服务器对这类定时操作的抽象
  */
 long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
         aeTimeProc *proc, void *clientData,
