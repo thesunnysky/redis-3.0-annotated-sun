@@ -2010,7 +2010,8 @@ int listenToPort(int port, int *fds, int *count) {
              * error and return to the caller with an error. */
             if (*count) break;
         } else if (strchr(server.bindaddr[j],':')) {
-            /* Bind IPv6 address. */
+			//strchr是在第一个字符中搜索第二个字符创第一次出现的位置
+			/* Bind IPv6 address. */
             fds[*count] = anetTcp6Server(server.neterr,port,server.bindaddr[j],
                 server.tcp_backlog);
         } else {
