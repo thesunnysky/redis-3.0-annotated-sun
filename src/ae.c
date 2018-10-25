@@ -177,13 +177,17 @@ int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
 
     if (fd >= eventLoop->setsize) return AE_ERR;
 
-    // 取出文件事件结构
+    // 取出已注册的文件事件结构
     aeFileEvent *fe = &eventLoop->events[fd];
 
     // 监听指定 fd 的指定事件
     if (aeApiAddEvent(eventLoop, fd, mask) == -1)
         return AE_ERR;
 
+	/*
+	 * 下面的代码做什么用?
+	 * 谁来调用文件事件的read/write处理器?
+	 */
     // 设置文件事件类型，以及事件的处理器
     fe->mask |= mask;
     if (mask & AE_READABLE) fe->rfileProc = proc;

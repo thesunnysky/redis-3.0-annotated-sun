@@ -119,6 +119,7 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
     ee.data.u64 = 0; /* avoid valgrind warning */
     ee.data.fd = fd;
 
+	//调用epoll_ctl, ADD或MOD一个事件?(更恰当的描述?)
     if (epoll_ctl(state->epfd,op,fd,&ee) == -1) return -1;
 
     return 0;
