@@ -174,7 +174,7 @@ typedef struct aeEventLoop {
     // 已就绪的文件事件
     aeFiredEvent *fired; /* Fired events */
 
-    // 时间事件
+    // 时间事件,通过链表来保存所有的时间事件
     aeTimeEvent *timeEventHead;
 
     // 事件处理器的开关

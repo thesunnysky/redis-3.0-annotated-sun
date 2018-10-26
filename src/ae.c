@@ -383,6 +383,11 @@ static aeTimeEvent *aeSearchNearestTimer(aeEventLoop *eventLoop)
 /* Process time events
  *
  * 处理所有已到达的时间事件
+ * 遍历时间事件列表,找到其中已经达到的时间事件并执行;
+ * 再每处理完一个时间事件之后根据时间事件的AE_NOMOER来决定该事件是否为"循环事件"
+ * 如果是,则重新设定该事件的下次执行事件(由于该事件已经在队列中了,所以不需要重新
+ * 将改时间再次加入队列中,只需要重新设定该事件的下次执行时间)
+ * 如果判定该事件后续不需要再执行,则将该事件从队列中移除;
  */
 static int processTimeEvents(aeEventLoop *eventLoop) {
     int processed = 0;
@@ -474,6 +479,7 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
  * (that may be registered by time event callbacks just processed).
  *
  * 处理所有已到达的时间事件，以及所有已就绪的文件事件。
+ * 处理事件有顺序,先处理已经到达的时间事件,然后处理已经就绪的文件事件
  *
  * Without special flags the function sleeps until some file event
  * fires, or when the next time event occurs (if any).
@@ -531,10 +537,17 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
             // 计算距今最近的时间事件还要多久才能达到
             // 并将该时间距保存在 tv 结构中
             aeGetTime(&now_sec, &now_ms);
+			/*
+			 * 时间的记录分为两部分,秒部分和毫秒部分,
+			 * 其中, now_sec记录的整数的秒部分,now_ms记录的是整数的毫秒部分
+			 */
             tvp = &tv;
+			//先计算出秒部分剩余的时间,然后再计算出毫秒部分剩余的时间
             tvp->tv_sec = shortest->when_sec - now_sec;
             if (shortest->when_ms < now_ms) {
+				//计算ms部分的差值,需要向秒部分借位后做减法
                 tvp->tv_usec = ((shortest->when_ms+1000) - now_ms)*1000;
+				//秒部分减去毫秒借的一位
                 tvp->tv_sec --;
             } else {
                 tvp->tv_usec = (shortest->when_ms - now_ms)*1000;
@@ -579,11 +592,13 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
             if (fe->mask & mask & AE_READABLE) {
                 // rfired 确保读/写事件只能执行其中一个
                 rfired = 1;
+				//处理读事件
                 fe->rfileProc(eventLoop,fd,fe->clientData,mask);
             }
             // 写事件
             if (fe->mask & mask & AE_WRITABLE) {
                 if (!rfired || fe->wfileProc != fe->rfileProc)
+					//处理写事件
                     fe->wfileProc(eventLoop,fd,fe->clientData,mask);
             }
 
@@ -592,7 +607,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
     }
 
     /* Check time events */
-    // 执行时间事件
+    // 执行时间事件,处理完文事件时候再开始处理时间事件
     if (flags & AE_TIME_EVENTS)
         processed += processTimeEvents(eventLoop);
 
