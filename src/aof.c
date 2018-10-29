@@ -1340,6 +1340,7 @@ int rewriteAppendOnlyFile(char *filename) {
      * 创建临时文件
      *
      * 注意这里创建的文件名和 rewriteAppendOnlyFileBackground() 创建的文件名稍有不同
+     * 子进程也会创建一个临时文件
      */
     snprintf(tmpfile,256,"temp-rewriteaof-%d.aof", (int) getpid());
     fp = fopen(tmpfile,"w");
@@ -1523,6 +1524,7 @@ int rewriteAppendOnlyFileBackground(void) {
         /* Child */
 
         // 关闭网络连接 fd
+        //sun:为什么需要关闭连接?
         closeListeningSockets(0);
 
         // 为进程设置名字，方便记认

@@ -1426,6 +1426,9 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     if (server.rdb_child_pid == -1 && server.aof_child_pid == -1 &&
         server.aof_rewrite_scheduled)
     {
+    	/* 
+    	 * 开启一个子进程开始进程background aof rewrite
+    	 */
         rewriteAppendOnlyFileBackground();
     }
 

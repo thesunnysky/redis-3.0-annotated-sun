@@ -105,6 +105,7 @@ void zlibc_free(void *ptr) {
     } \
 } while(0)
 
+//usedk_memory记录整个Redis服务器使用的内存?
 static size_t used_memory = 0;
 static int zmalloc_thread_safe = 0;
 pthread_mutex_t used_memory_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -259,6 +260,7 @@ void zmalloc_set_oom_handler(void (*oom_handler)(size_t)) {
 #include <fcntl.h>
 
 size_t zmalloc_get_rss(void) {
+	//获取系统配置的内存业大小,单位b,一般配置是4kb
     int page = sysconf(_SC_PAGESIZE);
     size_t rss;
     char buf[4096];
@@ -285,7 +287,9 @@ size_t zmalloc_get_rss(void) {
     if (!x) return 0;
     *x = '\0';
 
+	//获取从/proc/{pid}/stat中后去的进程使用的内存页的数量
     rss = strtoll(p,NULL,10);
+	//通过内存页的数量计算操作系统层面记录的内存使用量,单位b
     rss *= page;
     return rss;
 }
