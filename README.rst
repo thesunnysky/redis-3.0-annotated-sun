@@ -143,3 +143,7 @@ Fock from [huangz1990](https://github.com/huangz1990)/redis-3.0-annotated(https:
 ------------------------------
 尝试本地编译，编译失败，后经由替换[3.0.0-beta6](https://github.com/antirez/redis/releases/tag/3.0.0-beta6)的jemalloc包后编译成功，`make test `也成功；
 
+```
+make CFLAGS="-O0" PREFIX=/usr/local/redis
+```
+
