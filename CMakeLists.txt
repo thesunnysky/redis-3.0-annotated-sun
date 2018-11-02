@@ -55,14 +55,14 @@ set_property(TARGET redis-cli PROPERTY CXX_STANDARD_REQUIRED ON)
 target_include_directories(redis-server
         PRIVATE ${REDIS_ROOT}/deps/hiredis
         PRIVATE ${REDIS_ROOT}/deps/linenoise
-        # PRIVATE ${REDIS_ROOT}/deps/jemalloc
+        PRIVATE ${REDIS_ROOT}/deps/jemalloc
         PRIVATE ${REDIS_ROOT}/deps/lua/src
         )
 
 target_include_directories(redis-cli
         PRIVATE ${REDIS_ROOT}/deps/hiredis
         PRIVATE ${REDIS_ROOT}/deps/linenoise
-        # PRIVATE ${REDIS_ROOT}/deps/jemalloc
+        PRIVATE ${REDIS_ROOT}/deps/jemalloc
         PRIVATE ${REDIS_ROOT}/deps/lua/src
         )
 
