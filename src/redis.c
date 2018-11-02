@@ -1426,7 +1426,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     if (server.rdb_child_pid == -1 && server.aof_child_pid == -1 &&
         server.aof_rewrite_scheduled)
     {
-    	/* 
+    	/*
     	 * 开启一个子进程开始进程background aof rewrite
     	 */
         rewriteAppendOnlyFileBackground();
@@ -1567,8 +1567,17 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 
 /* This function gets called every time Redis is entering the
  * main loop of the event driven library, that is, before to sleep
- * for ready file descriptors. */
-// 每次处理事件之前执行
+ * for ready file descriptors.
+ */
+
+/* 每次处理事件之前执行，其中的工作主要包括：
+ * 1. 执行一起快速的主动过期检查
+ * 2. Send all the slaves an ACK request if at least one client blocked during the previous event loop iteration.
+ * 3. Unblock all the clients blocked for synchronous replication in WAIT
+ * 4. Try to process pending commands for clients that were just unblocked.
+ * 5. 将 AOF 缓冲区的内容写入到AOF文件
+ * 6. 如果server是以cluster模式运行的，在进入下个事件循环前，执行一些集群收尾工作
+ */
 void beforeSleep(struct aeEventLoop *eventLoop) {
     REDIS_NOTUSED(eventLoop);
 
