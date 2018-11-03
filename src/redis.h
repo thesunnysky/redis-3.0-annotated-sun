@@ -580,6 +580,8 @@ typedef struct redisClient {
     // 查询缓冲区长度峰值
     size_t querybuf_peak;   /* Recent (100ms or more) peak of querybuf size */
 
+    /* redis-server会读取querybuf中的内容，并解析，将解析后的命令记录在argc和argv中
+     */
     // 参数数量
     int argc;
 

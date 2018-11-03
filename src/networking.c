@@ -1233,6 +1233,7 @@ int processInlineBuffer(redisClient *c) {
     // argc = 3
     querylen = newline-(c->querybuf);
     aux = sdsnewlen(c->querybuf,querylen);
+    // argc中记录了解析出的命令的参数的个数
     argv = sdssplitargs(aux,&argc);
     sdsfree(aux);
     if (argv == NULL) {
@@ -1524,7 +1525,9 @@ void processInputBuffer(redisClient *c) {
             }
         }
 
-        // 将缓冲区中的内容转换成命令，以及命令参数
+        /* 将缓冲区中的内容转换成命令，以及命令参数
+         * 解析出的命令信息会存放在redisClient中的argc和argv中
+         */
         if (c->reqtype == REDIS_REQ_INLINE) {
             if (processInlineBuffer(c) != REDIS_OK) break;
         } else if (c->reqtype == REDIS_REQ_MULTIBULK) {

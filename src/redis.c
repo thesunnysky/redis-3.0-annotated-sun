@@ -2510,6 +2510,7 @@ void call(redisClient *c, int flags) {
             flags |= (REDIS_PROPAGATE_REPL | REDIS_PROPAGATE_AOF);
 
         if (flags != REDIS_PROPAGATE_NONE)
+            // 执行命令的传播
             propagate(c->cmd,c->db->id,c->argv,c->argc,flags);
     }
 
@@ -2522,7 +2523,7 @@ void call(redisClient *c, int flags) {
 
     /* Handle the alsoPropagate() API to handle commands that want to propagate
      * multiple separated commands. */
-    // 传播额外的命令
+    // 传播额外的命令 什么命令需要在这里传播
     if (server.also_propagate.numops) {
         int j;
         redisOp *rop;
@@ -2552,6 +2553,14 @@ void call(redisClient *c, int flags) {
  * 如果这个函数返回 1 ，那么表示客户端在执行命令之后仍然存在，
  * 调用者可以继续执行其他操作。
  * 否则，如果这个函数返回 0 ，那么表示客户端已经被销毁。
+ */
+/* 该函数表示了server具体执行命令的逻辑;主要是先针对要执行的命令做一系列的检查，
+ * 如果最终检查通过，则执行命令，否则报错;
+ * 具体的逻辑包括：
+ * 1. 查找命令对应的command
+ * 2. 检查认证信息
+ * 3. 如果开启了集群模式，判断命令是否需要进行转向操作
+ * 4. 如果设置了最大内存，那么检查内存是否超过限制，并做相应的操作
  */
 int processCommand(redisClient *c) {
     /* The QUIT command is handled separately. Normal command procs will
@@ -2622,6 +2631,7 @@ int processCommand(redisClient *c) {
         // 集群运作正常
         } else {
             int error_code;
+            //Return the pointer to the cluster node that is able to serve the command
             clusterNode *n = getNodeByQuery(c,c->cmd,c->argv,c->argc,&hashslot,&error_code);
             // 不能执行多键处理命令
             if (n == NULL) {
