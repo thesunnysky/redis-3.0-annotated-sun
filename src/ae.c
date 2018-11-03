@@ -575,7 +575,9 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags) {
             // 从已就绪数组中获取事件
             aeFileEvent *fe = &eventLoop->events[eventLoop->fired[j].fd];
 
+            //获取去已就绪文件事件的mask
             int mask = eventLoop->fired[j].mask;
+            //获取去已就绪文件事件的文件描述符
             int fd = eventLoop->fired[j].fd;
             int rfired = 0;
 

@@ -71,6 +71,7 @@ int listMatchObjects(void *a, void *b) {
 
 /*
  * 创建一个新客户端
+ * 在该函数内部设置了处理client 读事件的事件处理器
  */
 redisClient *createClient(int fd) {
 
@@ -747,6 +748,7 @@ void copyClientOutputBuffer(redisClient *dst, redisClient *src) {
 
 /*
  * TCP 连接 accept 处理器
+ * 在server中创建代表当前客户端的redisClient对象
  */
 #define MAX_ACCEPTS_PER_CALL 1000
 static void acceptCommonHandler(int fd, int flags) {
@@ -815,6 +817,7 @@ void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
 
 /*
  * 创建一个本地连接处理器
+ * 本地链接和非本地链接的处理方式有什么不同吗？
  */
 void acceptUnixHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
     int cfd, max = MAX_ACCEPTS_PER_CALL;
@@ -1544,7 +1547,7 @@ void processInputBuffer(redisClient *c) {
 
 /*
  * 读取客户端的查询缓冲区内容
- * 是不是负责查询操作的aeFileProc
+ * 是负责查询操作的aeFileProc
  */
 void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     redisClient *c = (redisClient*) privdata;

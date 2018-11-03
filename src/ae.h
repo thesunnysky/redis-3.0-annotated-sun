@@ -76,7 +76,7 @@
  */
 struct aeEventLoop;
 
-/* Types and data structures 
+/* Types and data structures
  *
  * 事件接口
  */
@@ -150,7 +150,7 @@ typedef struct aeFiredEvent {
 
 } aeFiredEvent;
 
-/* State of an event based program 
+/* State of an event based program
  *
  * 事件处理器的状态
  */
@@ -168,7 +168,7 @@ typedef struct aeEventLoop {
     // 最后一次执行时间事件的时间
     time_t lastTime;     /* Used to detect system clock skew */
 
-    // 已注册的文件事件
+    // 已注册的文件事件数组，通过文件事件的fd索引具体的文件事件
     aeFileEvent *events; /* Registered events */
 
     // 已就绪的文件事件
