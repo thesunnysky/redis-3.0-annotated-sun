@@ -2458,8 +2458,15 @@ void call(redisClient *c, int flags) {
     dirty = server.dirty;
     // 计算命令开始执行的时间
     start = ustime();
-    // 执行实现函数
+
+    /* 执行实现函数,该处包含了命令的执行的所有细节:
+     * 1.命令的具体执行;
+     * 2.将执行的结果返回给客户端;
+     */
     c->cmd->proc(c);
+
+    //下面的代码则是server端更新命令执行的一些统计信息及一些其他的操作
+
     // 计算命令执行耗费的时间
     duration = ustime()-start;
     // 计算命令执行之后的 dirty 值

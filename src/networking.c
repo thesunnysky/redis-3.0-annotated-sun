@@ -328,7 +328,7 @@ void _addReplyObjectToList(redisClient *c, robj *o) {
         }
     }
 
-    // 检查回复缓冲区的大小，如果超过系统限制的话，那么关闭客户端
+    // 检查回复缓冲区的大小，如果超过系统限制的话，那么关闭客户端(异步）
     asyncCloseClientOnOutputBufferLimitReached(c);
 }
 
@@ -404,7 +404,9 @@ void _addReplyStringToList(redisClient *c, char *s, size_t len) {
  * Higher level functions to queue data on the client output buffer.
  * The following functions are the ones that commands implementations will call.
  * -------------------------------------------------------------------------- */
-
+/**
+ * 为客户端设置命令回复处理器，并将命令的执行结果缓存到redisClient的回复缓冲区中
+ */
 void addReply(redisClient *c, robj *obj) {
 
     // 为客户端安装写处理器到事件循环
@@ -414,7 +416,7 @@ void addReply(redisClient *c, robj *obj) {
      * when there is a saving child running, avoiding touching the
      * refcount field of the object if it's not needed.
      *
-     * 如果在使用子进程，那么尽可能地避免修改对象的 refcount 域。
+     * 如果在使用子进程，如果在使用子进程 refcount 域。
      *
      * If the encoding is RAW and there is room in the static buffer
      * we'll be able to send the object to the client without
@@ -424,7 +426,9 @@ void addReply(redisClient *c, robj *obj) {
      * 那么就可以在不弄乱内存页的情况下，将对象发送给客户端。
      */
     if (sdsEncodedObject(obj)) {
-        // 首先尝试复制内容到 c->buf 中，这样可以避免内存分配
+        /* 首先尝试复制内容到 c->buf 中，这样可以避免内存分配
+         * 如果c->buf中已经有数据了，则不能将当前数据在复制到c->buf中
+         */
         if (_addReplyToBuffer(c,obj->ptr,sdslen(obj->ptr)) != REDIS_OK)
             // 如果 c->buf 中的空间不够，就复制到 c->reply 链表中
             // 可能会引起内存分配
@@ -1053,10 +1057,12 @@ void sendReplyToClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     REDIS_NOTUSED(el);
     REDIS_NOTUSED(mask);
 
-    // 一直循环，直到回复缓冲区为空
-    // 或者指定条件满足为止
+    /* 一直循环，直到回复缓冲区为空, 或者指定条件满足为止
+     * c->reply链表中存储的是client一条命令中要返回的多个redisObject对象
+     */
     while(c->bufpos > 0 || listLength(c->reply)) {
 
+        //如果固定大小的回复缓冲区中有数据
         if (c->bufpos > 0) {
 
             // c->bufpos > 0
@@ -1081,6 +1087,7 @@ void sendReplyToClient(aeEventLoop *el, int fd, void *privdata, int mask) {
                 c->sentlen = 0;
             }
         } else {
+            //如果固定大小的回复缓冲区中没有数据
 
             // listLength(c->reply) != 0
 
@@ -1159,6 +1166,12 @@ void sendReplyToClient(aeEventLoop *el, int fd, void *privdata, int mask) {
          * We just rely on data / pings received for timeout detection. */
         if (!(c->flags & REDIS_MASTER)) c->lastinteraction = server.unixtime;
     }
+
+    /* 如果缓冲区中的数据全部发送给了client，则关闭回复处理器
+     * 由于命令回复处理器是跟redis的命令绑定的，是server在执行每条命令的时候创建命令回复处理器，
+     * 所以在该条命令处理完成后该命令回复处理器就无用了，需要删除;
+     * 后续server在处理客户端新的命令时将会重新创建新的命令回复处理器
+     */
     if (c->bufpos == 0 && listLength(c->reply) == 0) {
         c->sentlen = 0;
 
@@ -1551,6 +1564,7 @@ void processInputBuffer(redisClient *c) {
 /*
  * 读取客户端的查询缓冲区内容
  * 是负责查询操作的aeFileProc
+ * 在客户端向server发送命令后，该事件处理器会读取客户端发送的命令到redisClient的querybuf中
  */
 void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     redisClient *c = (redisClient*) privdata;

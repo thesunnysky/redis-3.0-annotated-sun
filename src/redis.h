@@ -601,6 +601,7 @@ typedef struct redisClient {
     long bulklen;           /* length of bulk argument in multi bulk request */
 
     // 回复链表, 可变的输出缓冲区,记录的是多了字符串对象：StringObject
+    // 这些要返回给客户端的信息是同一个命令的返回结果，但是redisClient在缓存的时候用的list，
     list *reply;
 
     // 回复链表中对象的总大小
