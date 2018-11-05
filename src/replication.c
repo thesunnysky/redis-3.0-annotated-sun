@@ -1641,9 +1641,11 @@ void replicationUnsetMaster(void) {
             server.master_repl_offset = server.master->reploff;
             freeReplicationBacklog();
         }
+        //释放连接之前主服务器的client
         freeClient(server.master);
     }
 
+    //清除server中缓存的主服务器
     replicationDiscardCachedMaster();
 
     cancelReplicationHandshake();
@@ -1662,15 +1664,16 @@ void slaveofCommand(redisClient *c) {
 
     /* The special host/port combination "NO" "ONE" turns the instance
      * into a master. Otherwise the new master address is set. */
-    // SLAVEOF NO ONE 让从服务器转为主服务器
     if (!strcasecmp(c->argv[1]->ptr,"no") &&
         !strcasecmp(c->argv[2]->ptr,"one")) {
+        // SLAVEOF NO ONE 让从服务器转为主服务器
         if (server.masterhost) {
             // 让服务器取消复制，成为主服务器
             replicationUnsetMaster();
             redisLog(REDIS_NOTICE,"MASTER MODE enabled (user request)");
         }
     } else {
+        // SLAVEOF 其他master服务器
         long port;
 
         // 获取端口参数
