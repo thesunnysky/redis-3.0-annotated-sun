@@ -409,6 +409,7 @@ long long addReplyReplicationBacklog(redisClient *c, long long offset) {
 // 尝试进行部分 resync ，成功返回 REDIS_OK ，失败返回 REDIS_ERR 。
 int masterTryPartialResynchronization(redisClient *c) {
     long long psync_offset, psync_len;
+    //PSYNC命令格式： PSYNC <runid> <offset>，其中runid 是slave上次复制的主服务器的runid
     char *master_runid = c->argv[1]->ptr;
     char buf[128];
     int buflen;
