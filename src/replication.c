@@ -489,7 +489,7 @@ int masterTryPartialResynchronization(redisClient *c) {
      * to -1 to force the master to emit SELECT, since the slave already
      * has this state from the previous connection with the master. */
 
-    // 刷新低延迟从服务器的数量
+    // 刷新低延迟从服务器的数量, ?为什么要刷新低延迟服务器的数量?
     refreshGoodSlavesCount();
     return REDIS_OK; /* The caller can return, no full resync needed. */
 
@@ -646,7 +646,9 @@ void syncCommand(redisClient *c) {
 
     // 添加到 slave 列表中
     listAddNodeTail(server.slaves,c);
-    // 如果是第一个 slave ，那么初始化 backlog
+    /* 如果是第一个 slave ，那么初始化 backlog, 一个server只有一块backlog，
+     * 所有的客户端共用一块backlog
+     */
     if (listLength(server.slaves) == 1 && server.repl_backlog == NULL)
         createReplicationBacklog();
     return;
@@ -909,9 +911,11 @@ void updateSlavesWaitingBgsave(int bgsaveerr) {
 void replicationAbortSyncTransfer(void) {
     redisAssert(server.repl_state == REDIS_REPL_TRANSFER);
 
+    //关闭slave -> master SYNC的套接字
     aeDeleteFileEvent(server.el,server.repl_transfer_s,AE_READABLE);
     close(server.repl_transfer_s);
     close(server.repl_transfer_fd);
+    //删除RDB临时文件
     unlink(server.repl_transfer_tmpfile);
     zfree(server.repl_transfer_tmpfile);
     server.repl_state = REDIS_REPL_CONNECT;

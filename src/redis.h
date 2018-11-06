@@ -1190,7 +1190,7 @@ struct redisServer {
     // 最近一次执行 fsync 时的偏移量
     // 用于 sync_file_range 函数
     off_t repl_transfer_last_fsync_off; /* Offset when we fsync-ed last time. */
-    // 主服务器的套接字
+    // 主服务器的套接字 , Slave -> master SYNC socket
     int repl_transfer_s;     /* Slave -> Master SYNC socket */
     // 保存 RDB 文件的临时文件的描述符
     int repl_transfer_fd;    /* Slave -> Master SYNC temp file descriptor */
