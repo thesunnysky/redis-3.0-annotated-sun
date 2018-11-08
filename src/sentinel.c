@@ -322,9 +322,9 @@ typedef struct sentinelRedisInstance {
     /* 故障转移相关属性 -------------------------------------------------------------------*/
 
 
-    // 如果这是一个主服务器实例，那么 leader 将是负责进行故障转移的 Sentinel 的运行 ID 。
+    // 如果这是一个主服务器实例，那么leader将是负责进行故障转移的Sentinel的运行ID 。
     // 如果这是一个 Sentinel 实例，那么 leader 就是被选举出来的领头 Sentinel 。
-    // 这个域只在 Sentinel 实例的 flags 属性的 SRI_MASTER_DOWN 标志处于打开状态时才有效。
+    // 这个域只在Sentinel实例的 lags属性的SRI_MASTER_DOWN标志处于打开状态时才有效。
     char *leader;       /* If this is a master instance, this is the runid of
                            the Sentinel that should perform the failover. If
                            this is a Sentinel, this is the runid of the Sentinel
@@ -3102,6 +3102,7 @@ void sentinelSendPeriodicCommands(sentinelRedisInstance *ri) {
         (ri->master->flags & (SRI_O_DOWN | SRI_FAILOVER_IN_PROGRESS))) {
         info_period = 1000;
     } else {
+        //10000ms, 10s
         info_period = SENTINEL_INFO_PERIOD;
     }
 
