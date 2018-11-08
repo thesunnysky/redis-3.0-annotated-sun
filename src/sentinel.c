@@ -4226,7 +4226,8 @@ int sentinelSendSlaveOf(sentinelRedisInstance *ri, char *host, int port) {
 }
 
 /* Setup the master state to start a failover. */
-// 设置主服务器的状态，开始一次故障转移
+// 设置主服务器的状态，开始一次故障转移;
+//PS:只是标记了状态，该函数没有执行真正的failover
 void sentinelStartFailover(sentinelRedisInstance *master) {
     redisAssert(master->flags & SRI_MASTER);
 
