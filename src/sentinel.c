@@ -4234,7 +4234,7 @@ void sentinelStartFailover(sentinelRedisInstance *master) {
     // 更新故障转移状态
     master->failover_state = SENTINEL_FAILOVER_STATE_WAIT_START;
 
-    // 更新主服务器状态
+    // 更新主服务器状态，标记master正在进行failover
     master->flags |= SRI_FAILOVER_IN_PROGRESS;
 
     // 更新纪元
@@ -4299,7 +4299,11 @@ int sentinelStartFailoverIfNeeded(sentinelRedisInstance *master) {
         return 0;
     }
 
-    // 开始一次故障转移
+    /**更新master状态，开始一次故障转移更新
+     * master->failover_state = SENTINEL_FAILOVER_STATE_WAIT_START;
+     * master->flags |= SRI_FAILOVER_IN_PROGRESS;
+     * master->failover_epoch = ++sentinel.current_epoch;
+     */
     sentinelStartFailover(master);
 
     return 1;
@@ -4925,8 +4929,10 @@ void sentinelHandleRedisInstance(sentinelRedisInstance *ri) {
 
         // 如果主服务器进入了 ODOWN 状态，那么开始一次故障转移操作
         if (sentinelStartFailoverIfNeeded(ri))
-            // 强制向其他 Sentinel 发送 SENTINEL is-master-down-by-addr 命令
-            // 刷新其他 Sentinel 关于主服务器的状态
+            /* 强制向其他 Sentinel 发送 SENTINEL is-master-down-by-addr 命令
+             * 刷新其他 Sentinel 关于主服务器的状态
+             *尝试获得足够的票数，将主服务器标记为ODOWN状态，并开始一次故障转移
+             */
             sentinelAskMasterStateToOtherSentinels(ri, SENTINEL_ASK_FORCED);
 
         // 执行故障转移
@@ -4974,10 +4980,10 @@ void sentinelHandleDictOfRedisInstances(dict *instances) {
         // 以及所有 sentinel
         if (ri->flags & SRI_MASTER) {
 
-            // 所有从服务器
+            // 所有从服务器,本函数的递归调用
             sentinelHandleDictOfRedisInstances(ri->slaves);
 
-            // 所有 sentinel
+            // 所有 sentinel,本函数的递归调用
             sentinelHandleDictOfRedisInstances(ri->sentinels);
 
             // 对已下线主服务器（ri）的故障迁移已经完成
