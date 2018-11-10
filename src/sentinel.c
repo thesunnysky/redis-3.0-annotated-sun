@@ -4143,11 +4143,11 @@ char *sentinelGetLeader(sentinelRedisInstance *master, uint64_t epoch) {
      * common voted sentinel, or for itself if no vote exists at all. */
     // 本 Sentinel 进行投票
     // 如果 Sentinel 之前还没有进行投票，那么有两种选择：
-    // 1）如果选出了 winner （最多票数支持的 Sentinel ），那么这个 Sentinel 也投 winner 一票
-    // 2）如果没有选出 winner ，那么 Sentinel 投自己一票
     if (winner)
+        // 1）如果选出了 winner （最多票数支持的 Sentinel ），那么这个 Sentinel 也投 winner 一票
         myvote = sentinelVoteLeader(master, epoch, winner, &leader_epoch);
     else
+        // 2）如果没有选出 winner ，那么 Sentinel 投自己一票
         myvote = sentinelVoteLeader(master, epoch, server.runid, &leader_epoch);
 
     // 领头 Sentinel 已选出，并且领头的纪元和给定的纪元一样
@@ -4501,7 +4501,7 @@ void sentinelFailoverWaitStart(sentinelRedisInstance *ri) {
         // Sentinel 的当选时间已过，取消故障转移计划
         if (mstime() - ri->failover_start_time > election_timeout) {
             sentinelEvent(REDIS_WARNING, "-failover-abort-not-elected", ri, "%@");
-            // 取消故障转移
+            // 取消故障转移, 通过清空sentinelRedisInstance的标志位
             sentinelAbortFailover(ri);
         }
         return;
@@ -4832,6 +4832,9 @@ void sentinelFailoverStateMachine(sentinelRedisInstance *ri) {
             // 等待升级生效，如果升级超时，那么重新选择新主服务器
             // 具体情况请看 sentinelRefreshInstanceInfo 函数
         case SENTINEL_FAILOVER_STATE_WAIT_PROMOTION:
+            /* 更新ri->failover_state的状态为SENTINEL_FAILOVER_STATE_RECONF_SLAVES并没有在sentinelFailoverWaitPromotion()
+             * 函数中完成,而是在sentinelRefreshInstanceInfo()中完成
+             */
             sentinelFailoverWaitPromotion(ri);
             break;
 
@@ -4879,7 +4882,7 @@ void sentinelAbortFailover(sentinelRedisInstance *ri) {
  * -------------------------------------------------------------------------- */
 
 /* Perform scheduled operations for the specified Redis instance. */
-// 对给定的实例执行定期操作
+// 对给定的实例执行定期操作, 实例的类型可以是master,slave,sentinel,对于不同的实例采取的行为也不相同
 void sentinelHandleRedisInstance(sentinelRedisInstance *ri) {
 
     /* ========== MONITORING HALF ============ */
