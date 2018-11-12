@@ -1383,6 +1383,7 @@ int clusterHandshakeInProgress(char *ip, int port) {
  * EINVAL - IP or port are not valid.
  *          ip 或者 port 参数不合法。
  */
+//CLUSTER MEET命令中Handshake的实现
 int clusterStartHandshake(char *ip, int port) {
     clusterNode *n;
     char norm_ip[REDIS_IP_STR_LEN];
@@ -1404,7 +1405,7 @@ int clusterStartHandshake(char *ip, int port) {
     }
 
     /* Port sanity check */
-    // port 合法性检查
+    // port 合法性检查 ? port > 65535 - 是做什么用？
     if (port <= 0 || port > (65535-REDIS_CLUSTER_PORT_INCR)) {
         errno = EINVAL;
         return 0;
@@ -4434,7 +4435,7 @@ void clusterCommand(redisClient *c) {
             return;
         }
 
-        // 尝试与给定地址的节点进行连接
+        // 尝试与给定地址的节点进行连接(握手)
         if (clusterStartHandshake(c->argv[2]->ptr,port) == 0 &&
             errno == EINVAL)
         {

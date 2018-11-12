@@ -17,7 +17,7 @@
 #define REDIS_CLUSTER_PORT_INCR 10000 /* Cluster port = baseport + PORT_INCR */
 
 /* The following defines are amunt of time, sometimes expressed as
- * multiplicators of the node timeout value (when ending with MULT). 
+ * multiplicators of the node timeout value (when ending with MULT).
  *
  * 以下是和时间有关的一些常量，
  * 以 _MULTI 结尾的常量会作为时间值的乘法因子来使用。
@@ -200,7 +200,7 @@ typedef struct clusterNode clusterNode;
 
 // 集群状态，每个节点都保存着一个这样的状态，记录了它们眼中的集群的样子。
 // 另外，虽然这个结构主要用于记录集群的属性，但是为了节约资源，
-// 有些与节点有关的属性，比如 slots_to_keys 、 failover_auth_count 
+// 有些与节点有关的属性，比如 slots_to_keys 、 failover_auth_count
 // 也被放到了这个结构里面。
 typedef struct clusterState {
 
@@ -221,7 +221,7 @@ typedef struct clusterState {
     dict *nodes;          /* Hash table of name -> clusterNode structures */
 
     // 节点黑名单，用于 CLUSTER FORGET 命令
-    // 防止被 FORGET 的命令重新被添加到集群里面
+    // 防止被 FORGET 的节点重新被添加到集群里面
     // （不过现在似乎没有在使用的样子，已废弃？还是尚未实现？）
     dict *nodes_black_list; /* Nodes we don't re-add for a few seconds. */
 
@@ -287,7 +287,7 @@ typedef struct clusterState {
     // 在进入下个事件循环之前要做的事情，以各个 flag 来记录
     int todo_before_sleep; /* Things to do in clusterBeforeSleep(). */
 
-    // 通过 cluster 连接发送的消息数量
+    // 通过 cluster bus 连接发送的消息数量, what is cluster bus?
     long long stats_bus_messages_sent;  /* Num of msg sent via cluster bus. */
 
     // 通过 cluster 接收到的消息数量
