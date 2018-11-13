@@ -2649,6 +2649,7 @@ int processCommand(redisClient *c) {
         } else {
             int error_code;
             //Return the pointer to the cluster node that is able to serve the command
+            //函数处理过程中产生的错误信息酱油error_code记录
             clusterNode *n = getNodeByQuery(c, c->cmd, c->argv, c->argc, &hashslot, &error_code);
             // 不能执行多键处理命令
             if (n == NULL) {

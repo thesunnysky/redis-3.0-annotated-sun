@@ -5631,7 +5631,7 @@ clusterNode *getNodeByQuery(redisClient *c, struct redisCommand *cmd, robj **arg
     // 这个 if 和接下来的 for 进行的就是这一合法性检测
     if (cmd->proc == execCommand) {
         /* If REDIS_MULTI flag is not set EXEC is just going to return an
-         * error. */
+         * error. */ // 为什么return myself 就是 return an error了？
         if (!(c->flags & REDIS_MULTI)) return myself;
         ms = &c->mstate;
     } else {
@@ -5662,6 +5662,7 @@ clusterNode *getNodeByQuery(redisClient *c, struct redisCommand *cmd, robj **arg
         // 遍历命令中的所有键
         for (j = 0; j < numkeys; j++) {
             robj *thiskey = margv[keyindex[j]];
+            //计算key所在的slot
             int thisslot = keyHashSlot((char*)thiskey->ptr,
                                        sdslen(thiskey->ptr));
 
@@ -5706,6 +5707,7 @@ clusterNode *getNodeByQuery(redisClient *c, struct redisCommand *cmd, robj **arg
 
             /* Migarting / Improrting slot? Count keys we don't have. */
             if ((migrating_slot || importing_slot) &&
+                //集群模式下只使用0号数据库
                 lookupKeyRead(&server.db[0],thiskey) == NULL)
             {
                 missing_keys++;
@@ -5726,6 +5728,7 @@ clusterNode *getNodeByQuery(redisClient *c, struct redisCommand *cmd, robj **arg
 
     /* If we don't have all the keys and we are migrating the slot, send
      * an ASK redirection. */
+    //当前node没有找到所有的key并且当前节点正在迁移该slot，将进行ASK redirection；
     if (migrating_slot && missing_keys) {
         if (error_code) *error_code = REDIS_CLUSTER_REDIR_ASK;
         return server.cluster->migrating_slots_to[slot];
@@ -5735,6 +5738,8 @@ clusterNode *getNodeByQuery(redisClient *c, struct redisCommand *cmd, robj **arg
      * request as "ASKING", we can serve the request. However if the request
      * involves multiple keys and we don't have them all, the only option is
      * to send a TRYAGAIN error. */
+    /* 当前node正在接受该slot，并且客户端已经ASKING请求过，该node将处理该次的请求
+     */
     if (importing_slot &&
         (c->flags & REDIS_ASKING || cmd->flags & REDIS_CMD_ASKING))
     {
@@ -5749,6 +5754,10 @@ clusterNode *getNodeByQuery(redisClient *c, struct redisCommand *cmd, robj **arg
     /* Handle the read-only client case reading from a slave: if this
      * node is a slave and the request is about an hash slot our master
      * is serving, we can reply without redirection. */
+    /*如果客户端是也READONLY的客户端，客户端请求的命令也是一个READONLY的命令,并且
+     * 当前node是一个slave，命令请求的key是当前slave对应的master负责的，则可以由
+     * 当前node处理该命令，而不用重定向；
+     */
     if (c->flags & REDIS_READONLY &&
         cmd->flags & REDIS_CMD_READONLY &&
         nodeIsSlave(myself) &&
