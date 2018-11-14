@@ -3535,7 +3535,7 @@ void clusterHandleSlaveMigration(int max_slaves) {
  * data loss due to the asynchronous master-slave replication.
  * -------------------------------------------------------------------------- */
 
-/* Reset the manual failover state. This works for both masters and slavesa
+/* Reset the manual failover state. This works for both masters and slaves
  * as all the state about manual failover is cleared.
  *
  * 重置与手动故障转移有关的状态，主节点和从节点都可以使用。
@@ -4256,11 +4256,13 @@ void clusterSetMaster(clusterNode *n) {
     redisAssert(myself->numslots == 0);
 
     if (nodeIsMaster(myself)) {
+        //myself当前角色是master，需要将自己转成slave
         myself->flags &= ~REDIS_NODE_MASTER;
         myself->flags |= REDIS_NODE_SLAVE;
         clusterCloseAllSlots();
     } else {
         if (myself->slaveof)
+            //myself是slave角色
             clusterNodeRemoveSlave(myself->slaveof,myself);
     }
 
