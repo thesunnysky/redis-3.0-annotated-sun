@@ -1845,6 +1845,7 @@ void clusterUpdateSlotsConfigWith(clusterNode *sender, uint64_t senderConfigEpoc
  * with the greatest Node ID never moves forward, so eventually all the nodes
  * end with a different configuration epoch.
  */
+//configEpoch冲突问题
 void clusterHandleConfigEpochCollision(clusterNode *sender) {
     /* Prerequisites: nodes have the same configEpoch and are both masters. */
     if (sender->configEpoch != myself->configEpoch ||
@@ -1965,12 +1966,17 @@ int clusterProcessPacket(clusterLink *link) {
         sender->repl_offset_time = mstime();
         /* If we are a slave performing a manual failover and our master
          * sent its offset while already paused, populate the MF state. */
+        /* cluster模式下，当前节点是slave节点并且在执行manual failover，此时
+         * master通过消息发送他的offset过来，slave节点会将主极点的复制偏移量
+         * 记录到server.cluster->mf_master_offset中
+         */
         if (server.cluster->mf_end &&
             nodeIsSlave(myself) &&
             myself->slaveof == sender &&
             hdr->mflags[0] & CLUSTERMSG_FLAG0_PAUSED &&
             server.cluster->mf_master_offset == 0)
         {
+            //记录master的复制偏移量
             server.cluster->mf_master_offset = sender->repl_offset;
             redisLog(REDIS_WARNING,
                 "Received replication offset for paused "
@@ -2722,6 +2728,7 @@ void clusterBuildMessageHdr(clusterMsg *hdr, int type) {
     hdr->offset = htonu64(offset);
 
     /* Set the message flags. */
+    //在cluster模式下，主节点在manual failover时在心跳包中设置CLUSTERMSG_FLAG0_PAUSED
     if (nodeIsMaster(myself) && server.cluster->mf_end)
         hdr->mflags[0] |= CLUSTERMSG_FLAG0_PAUSED;
 
@@ -2885,6 +2892,7 @@ void clusterBroadcastPong(int target) {
 
         // 不向未建立连接的节点发送
         if (!node->link) continue;
+        // 不向Handshake的节点发送
         if (node == myself || nodeInHandshake(node)) continue;
         if (target == CLUSTER_BROADCAST_LOCAL_SLAVES) {
             int local_slave =
@@ -3369,6 +3377,16 @@ void clusterHandleSlaveFailover(void) {
 
     /* Check if we reached the quorum. */
     // 如果当前节点获得了足够多的投票，那么对下线主节点进行故障转移
+    /* 故障转移的具体步骤包括：
+     * 1.将当前节点的身份由从节点改为主节点
+     * 2.让从节点取消复制，成为新的主节点
+     * 3.接收所有主节点负责处理的槽
+     * 4.更新集群配置纪元
+     * 5.更新节点状态
+     * 6.并保存配置文件
+     * 7.向所有节点发送 PONG 信息
+     * 8.让它们可以知道当前节点已经升级为主节点了
+     */
     if (server.cluster->failover_auth_count >= needed_quorum) {
         // 旧主节点
         clusterNode *oldmaster = myself->slaveof;
@@ -3566,6 +3584,8 @@ void manualFailoverCheckTimeout(void) {
 
 /* This function is called from the cluster cron function in order to go
  * forward with a manual failover state machine. */
+/* cluster模式下，clusterCron()函数中调用，用来保持manual failover的继续执行
+ */
 void clusterHandleManualFailover(void) {
     /* Return ASAP if no manual failover is in progress. */
     if (server.cluster->mf_end == 0) return;
@@ -3579,6 +3599,9 @@ void clusterHandleManualFailover(void) {
     if (server.cluster->mf_master_offset == replicationGetSlaveOffset()) {
         /* Our replication offset matches the master replication offset
          * announced after clients were paused. We can start the failover. */
+        /* 当前slave和master复制偏移量相同，表示slave已经和master的数据已经同步，
+         * slave可以开始failover
+         */
         server.cluster->mf_can_start = 1;
         redisLog(REDIS_WARNING,
             "All master replication stream processed, "
@@ -3597,7 +3620,10 @@ void clusterCron(void) {
     dictEntry *de;
     int update_state = 0;
     int orphaned_masters; /* How many masters there are without ok slaves. */
+    //max_slaves 和 this_slaves都是为了从节点迁移用
+    //max_slaves记录了所有主节点中拥有最多未下线从节点的那个主节点的未下线从节点数；
     int max_slaves; /* Max number of ok slaves for a single master. */
+    //当期节点是从节点，this_slaves记录master的ok slaves的个数
     int this_slaves; /* Number of ok slaves for our master (if we are slave). */
     mstime_t min_pong = 0, now = mstime();
     clusterNode *min_pong_node = NULL;
@@ -3710,7 +3736,7 @@ void clusterCron(void) {
 
         /* Check a few random nodes and ping the one with the oldest
          * pong_received time. */
-        // 随机 5 个节点，选出其中一个
+        // 随机 5 个节点，选出其中一个发送pong消息最久的节点
         for (j = 0; j < 5; j++) {
 
             // 随机在集群中挑选节点
@@ -3792,7 +3818,7 @@ void clusterCron(void) {
          * received PONG is older than half the cluster timeout, send
          * a new ping now, to ensure all the nodes are pinged without
          * a too big delay. */
-        // 如果目前没有在 PING 节点
+        // 如果目前没有在 PING 节点, 遍历所有的节点
         // 并且已经有 node timeout 一半的时间没有从节点那里收到 PONG 回复
         // 那么向节点发送一个 PING ，确保节点的信息不会太旧
         // （因为一部分节点可能一直没有被随机中）
@@ -3865,6 +3891,23 @@ void clusterCron(void) {
          * the orphaned masters. Note that it does not make sense to try
          * a migration if there is no master with at least *two* working
          * slaves. */
+        /* 在Redis集群中，为了增强集群的可用性，一般情况下需要为每个主节点配置若干从
+         * 节点。但是这种主从关系如果是固定不变的，则经过一段时间之后，就有可能出现孤
+         * 立主节点的情况，也就是一个主节点再也没有可用于故障转移的从节点了，一旦这样
+         * 的主节点下线，整个集群也就不可用了。
+         * 因此，在Redis集群中，增加了从节点迁移的功能。简单描述如下：一旦发现集群中
+         * 出现了孤立主节点，则某个从节点A就会自动变成该孤立主节点的从节点。该从节点A
+         * 满足这样的条件：A的主节点具有最多的附属从节点；A在这些附属从节点中，节点ID
+         * 是最小的
+         *（The acting slave is the slave among the masterswith the maximum
+         * number of attached slaves, that is not in FAIL state and hasthe
+         * smallest node ID）。
+         */
+        /*轮训完所有节点之后，如果存在孤立主节点，并且max_slaves大于等于2，并且
+         * 当前节点刚好是那个拥有最多未下线从节点的主节点的众多从节点之一,则调用
+         * clusterHandleSlaveMigration()函数进行从节点迁移：将当期从节点置为某
+         * 孤立主节点的从节点
+         */
         if (orphaned_masters && max_slaves >= 2 && this_slaves == max_slaves)
             clusterHandleSlaveMigration(max_slaves);
     }
