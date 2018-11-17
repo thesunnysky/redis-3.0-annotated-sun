@@ -2456,10 +2456,12 @@ void call(redisClient *c, int flags) {
 
     /* Sent the command to clients in MONITOR mode, only if the commands are
      * not generated from reading an AOF. */
-    // 如果可以的话，将命令发送到 MONITOR
+    /* MONITOR的实现，如果可以的话，将命令发送到 MONITOR,将命令发送给MONITOR之后再执行命令
+     */
     if (listLength(server.monitors) &&
         !server.loading &&
         !(c->cmd->flags & REDIS_CMD_SKIP_MONITOR)) {
+        //发送的信息包括：dbId和客户端请求的命令及参数
         replicationFeedMonitors(c, server.monitors, c->db->id, c->argv, c->argc);
     }
 
@@ -2504,7 +2506,9 @@ void call(redisClient *c, int flags) {
 
     /* Log the command into the Slow log if needed, and populate the
      * per-command statistics that we show in INFO commandstats. */
-    // 如果有需要，将命令放到 SLOWLOG 里面
+    /* SlowLog的实现,如果有需要，将命令放到 SLOWLOG 里面
+     * slowlog不记录exec相关的命令
+     */
     if (flags & REDIS_CALL_SLOWLOG && c->cmd->proc != execCommand)
         slowlogPushEntryIfNeeded(c->argv, c->argc, duration);
     // 更新命令的统计信息

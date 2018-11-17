@@ -54,7 +54,7 @@ int listMatchPubsubPattern(void *a, void *b) {
 }
 
 /* Subscribe a client to a channel. Returns 1 if the operation succeeded, or
- * 0 if the client was already subscribed to that channel. 
+ * 0 if the client was already subscribed to that channel.
  *
  * 设置客户端 c 订阅频道 channel 。
  *
@@ -83,6 +83,7 @@ int pubsubSubscribeChannel(redisClient *c, robj *channel) {
         // 如果 channel 不存在于字典，那么添加进去
         de = dictFind(server.pubsub_channels,channel);
         if (de == NULL) {
+            //创建链表
             clients = listCreate();
             dictAdd(server.pubsub_channels,channel,clients);
             incrRefCount(channel);
@@ -118,7 +119,7 @@ int pubsubSubscribeChannel(redisClient *c, robj *channel) {
 }
 
 /* Unsubscribe a client from a channel. Returns 1 if the operation succeeded, or
- * 0 if the client was not subscribed to the specified channel. 
+ * 0 if the client was not subscribed to the specified channel.
  *
  * 客户端 c 退订频道 channel 。
  *
@@ -152,7 +153,7 @@ int pubsubUnsubscribeChannel(redisClient *c, robj *channel, int notify) {
 
         retval = 1;
         /* Remove the client from the channel -> clients list hash table */
-        // 从 channel->clients 的 clients 链表中，移除 client 
+        // 从 channel->clients 的 clients 链表中，移除 client
         // 示意图：
         // before:
         // {
@@ -207,7 +208,7 @@ int pubsubUnsubscribeChannel(redisClient *c, robj *channel, int notify) {
     return retval;
 }
 
-/* Subscribe a client to a pattern. Returns 1 if the operation succeeded, or 0 if the client was already subscribed to that pattern. 
+/* Subscribe a client to a pattern. Returns 1 if the operation succeeded, or 0 if the client was already subscribed to that pattern.
  *
  * 设置客户端 c 订阅模式 pattern 。
  *
@@ -220,7 +221,7 @@ int pubsubSubscribePattern(redisClient *c, robj *pattern) {
     // 这里为什么不像 channel 那样，用字典来进行检测呢？
     // 虽然 pattern 的数量一般来说并不多
     if (listSearchKey(c->pubsub_patterns,pattern) == NULL) {
-        
+
         // 如果没有的话，执行以下代码
 
         retval = 1;
@@ -261,7 +262,7 @@ int pubsubSubscribePattern(redisClient *c, robj *pattern) {
 }
 
 /* Unsubscribe a client from a channel. Returns 1 if the operation succeeded, or
- * 0 if the client was not subscribed to the specified channel. 
+ * 0 if the client was not subscribed to the specified channel.
  *
  * 取消客户端 c 对模式 pattern 的订阅。
  *
@@ -310,7 +311,7 @@ int pubsubUnsubscribePattern(redisClient *c, robj *pattern, int notify) {
 }
 
 /* Unsubscribe from all the channels. Return the number of channels the
- * client was subscribed from. 
+ * client was subscribed from.
  *
  * 退订客户端 c 订阅的所有频道。
  *
@@ -348,7 +349,7 @@ int pubsubUnsubscribeAllChannels(redisClient *c, int notify) {
 }
 
 /* Unsubscribe from all the patterns. Return the number of patterns the
- * client was subscribed from. 
+ * client was subscribed from.
  *
  * 退订客户端 c 订阅的所有模式。
  *
@@ -383,7 +384,7 @@ int pubsubUnsubscribeAllPatterns(redisClient *c, int notify) {
     return count;
 }
 
-/* Publish a message 
+/* Publish a message
  *
  * 将 message 发送到所有订阅频道 channel 的客户端，
  * 以及所有订阅了和 channel 频道匹配的模式的客户端。
@@ -473,6 +474,7 @@ int pubsubPublishMessage(robj *channel, robj *message) {
  * Pubsub commands implementation
  *----------------------------------------------------------------------------*/
 
+//subscribe命令的实现，subscribe命令可带多个代表channel的参数
 void subscribeCommand(redisClient *c) {
     int j;
 
@@ -509,6 +511,7 @@ void punsubscribeCommand(redisClient *c) {
     }
 }
 
+/* publish命令的实现 */
 void publishCommand(redisClient *c) {
 
     int receivers = pubsubPublishMessage(c->argv[1],c->argv[2]);

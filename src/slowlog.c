@@ -55,7 +55,7 @@
  * 创建一条新的慢查询日志
  *
  * Incrementing the ref count of all the objects retained is up to
- * this function. 
+ * this function.
  *
  * 函数负责增加所有记录对象的引用计数
  */
@@ -121,7 +121,7 @@ slowlogEntry *slowlogCreateEntry(robj **argv, int argc, long long duration) {
  *
  * 因为函数参数的类型为 void* ，所以它可以用作 adlist.c 中的 free 方法。
  *
- * This function will take care to release all the retained object. 
+ * This function will take care to release all the retained object.
  *
  * 这个函数负责对所有记录对象进行引用计数减一。
  */
@@ -139,7 +139,7 @@ void slowlogFreeEntry(void *septr) {
 }
 
 /* Initialize the slow log. This function should be called a single time
- * at server startup. 
+ * at server startup.
  *
  * 初始化服务器慢查询功能。
  *
@@ -163,7 +163,7 @@ void slowlogInit(void) {
  * 那么将一个新条目以 FIFO 顺序推入到慢查询日志中。
  *
  * This function will make sure to trim the slow log accordingly to the
- * configured max length. 
+ * configured max length.
  *
  * 根据服务器设置的最大日志长度，可能会对日志进行截断（trim）
  */
@@ -174,16 +174,16 @@ void slowlogPushEntryIfNeeded(robj **argv, int argc, long long duration) {
 
     // 如果执行时间超过服务器设置的上限，那么将命令添加到慢查询日志
     if (duration >= server.slowlog_log_slower_than)
-        // 新日志添加到链表表头
+        // 创建日志的slowlogEntry,并将新日志添加到链表表头
         listAddNodeHead(server.slowlog,slowlogCreateEntry(argv,argc,duration));
 
     /* Remove old entries if needed. */
-    // 如果日志数量过多，那么进行删除
+    // 如果日志数量过多，那么进行删除, 保证server记录的slowlog数目不超过server.slowlog_max_len
     while (listLength(server.slowlog) > server.slowlog_max_len)
         listDelNode(server.slowlog,listLast(server.slowlog));
 }
 
-/* Remove all the entries from the current slow log. 
+/* Remove all the entries from the current slow log.
  *
  * 删除所有慢查询日志
  */
@@ -193,7 +193,7 @@ void slowlogReset(void) {
 }
 
 /* The SLOWLOG command. Implements all the subcommands needed to handle the
- * Redis slow log. 
+ * Redis slow log.
  *
  * SLOWLOG 命令的实现，支持 GET / RESET 和 LEN 参数
  */
