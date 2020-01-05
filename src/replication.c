@@ -1351,7 +1351,7 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
      * replication process where we have long timeouts in the order of
      * seconds (in the meantime the slave would block). */
     // 如果状态为 CONNECTING ，那么在进行初次同步之前，
-    // 向主服务器发送一个非阻塞的 PONG
+    // 向主服务器发送一个非阻塞的 PING
     // 因为接下来的 RDB 文件发送非常耗时，所以我们想确认主服务器真的能访问
     if (server.repl_state == REDIS_REPL_CONNECTING) {
         redisLog(REDIS_NOTICE,"Non blocking connect for SYNC fired the event.");
