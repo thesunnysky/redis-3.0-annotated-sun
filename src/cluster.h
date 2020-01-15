@@ -242,6 +242,7 @@ typedef struct clusterState {
     // 跳跃表，表中以槽作为分值，键作为成员，对槽进行有序排序
     // 当需要对某些槽进行区间（range）操作时，这个跳跃表可以提供方便
     // 具体操作定义在 db.c 里面
+    // redis5中这里用了其他数据结构,用rax来代替了skiplist
     zskiplist *slots_to_keys;
 
     /* The following fields are used to take the slave state on elections. */
